@@ -1,4 +1,5 @@
 {
+  "type": "module",
   "name": "purescript-installer",
   "version": "0.3.3",
   "description": "Installs the PureScript compiler",
@@ -30,9 +31,12 @@
     "zen-observable": "^0.8.14"
   },
   "devDependencies": {
+    "eslint": "^8.34.0",
+    "eslint-config-airbnb": "^19.0.4",
     "tap": "^16.2.0"
   },
   "scripts": {
+    "lint": "eslint index.js lib test",
     "test": "tap"
   },
   "repository": {

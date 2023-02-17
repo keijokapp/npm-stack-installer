@@ -1,32 +1,32 @@
 #!/usr/bin/env node
-'use strict';
 
-const {dirname, resolve} = require('path');
-const {stat} = require('fs');
-const {promisify} = require('util');
-
-const chalk = require('chalk');
+import { dirname, resolve } from 'node:path';
+import { stat } from 'node:fs/promises';
+import module from 'node:module';
+import chalk from 'chalk';
+import filesize from 'filesize';
+import cacache from 'cacache';
+import logUpdate from 'log-update';
+import logSymbols from 'log-symbols';
+import minimist from 'minimist';
+import ms from 'ms';
+import once from 'once';
+import installPurescript from './lib/install-purescript.js';
+import {
+	cacheKey, defaultBinName, defaultCacheRootDir, defaultVersion, supportedBuildFlags
+} from './lib/config.js';
 
 const isPrettyMode = process.stdout && process.stdout.isTTY && !/^1|true$/ui.test(process.env.CI) && !process.env.GITHUB_ACTION;
 chalk.enabled = chalk.enabled && isPrettyMode;
 
-const filesize = require('filesize');
-const cacache = require('cacache');
-const logUpdate = require('log-update');
-const logSymbols = require('log-symbols');
-const minimist = require('minimist');
-const ms = require('ms');
-const once = require('once');
-
-const installPurescript = require('./install-purescript/index.js');
-
-const {blue, cyan, dim, magenta, red, strikethrough, underline, yellow} = chalk;
+const {
+	blue, cyan, dim, magenta, red, strikethrough, underline, yellow
+} = chalk;
 
 const failure = `${logSymbols.error} `;
 const info = isPrettyMode ? `${logSymbols.info} ` : '';
 const success = `${logSymbols.success} `;
 const warning = `${logSymbols.warning} `;
-const defaultBinName = `purs${process.platform === 'win32' ? '.exe' : ''}`;
 const stackArgs = [];
 const filesizeOptions = {
 	base: 10,
@@ -46,7 +46,7 @@ const argv = minimist(process.argv.slice(2), {
 		'purs-ver': '0.13.0'
 	},
 	unknown(flag) {
-		if (!installPurescript.supportedBuildFlags.has(flag)) {
+		if (!supportedBuildFlags.has(flag)) {
 			return;
 		}
 
@@ -54,8 +54,14 @@ const argv = minimist(process.argv.slice(2), {
 	}
 });
 
+const getPackageJson = once(() => {
+	const require = module.createRequire(import.meta.url);
+
+	return require('./package.json');
+});
+
 if (argv.help) {
-	console.log(`install-purescript v${require('./package.json').version}
+	console.log(`install-purescript v${getPackageJson().version}
 Install PureScript to the current working directory
 
 Usage:
@@ -63,7 +69,7 @@ install-purescript [options]
 
 Options:
 --purs-ver <string> Specify PureScript version
-                        Default: ${installPurescript.defaultVersion}
+                        Default: ${defaultVersion}
 --name     <string> Change a binary name
                         Default: 'purs.exe' on Windows, 'purs' on others
                         Or, if the current working directory contains package.json
@@ -73,23 +79,25 @@ Options:
 --version           Print version
 
 Also, these flags are passed to \`stack install\` command if provided:
-${[...installPurescript.supportedBuildFlags].join('\n')}
+${[...supportedBuildFlags].join('\n')}
 `);
 
 	process.exit();
 }
 
 if (argv.version) {
-	console.log(require('./package.json').version);
+	console.log(getPackageJson().version);
 	process.exit();
 }
 
 if (!argv.name) {
 	try {
-		const {purs} = require(resolve('package.json')).bin;
+		const require = module.createRequire(import.meta.url);
+		// eslint-disable-next-line import/no-dynamic-require
+		const { purs } = require(resolve('package.json')).bin;
 
 		argv.name = purs !== undefined ? purs : defaultBinName;
-	} catch(_) {
+	} catch (_) {
 		argv.name = defaultBinName;
 	}
 }
@@ -100,8 +108,9 @@ class TaskGroup extends Map {
 
 		const pairs = [...this.entries()];
 
-		for (const [index, [_, task]] of pairs.entries()) {
+		for (const [index, [, task]] of pairs.entries()) {
 			if (index < pairs.length - 1) {
+				// eslint-disable-next-line prefer-destructuring
 				task.nextTask = pairs[index + 1][1];
 			}
 		}
@@ -205,7 +214,9 @@ const taskGroups = [
 ];
 
 const path = resolve(argv.name);
-const spinnerFrames = [4, 18, 50, 49, 53, 45, 31, 32, 0, 8].map(code => String.fromCharCode(10247 + code));
+const spinnerFrames = [4, 18, 50, 49, 53, 45, 31, 32, 0, 8].map(
+	code => String.fromCharCode(10247 + code)
+);
 let time = Date.now();
 let frame = 0;
 let loop = 0;
@@ -213,7 +224,9 @@ let cacheWritten = false;
 const render = isPrettyMode ? () => {
 	const lines = [];
 
-	for (const [taskName, {allowFailure, duration, head, message, status, subhead}] of taskGroups[0]) {
+	for (const [taskName, {
+		allowFailure, duration, head, message, status, subhead
+	}] of taskGroups[0]) {
 		let willEnd = false;
 
 		if (status === 'done' || status === 'failed') {
@@ -252,7 +265,7 @@ const render = isPrettyMode ? () => {
 			if (status === 'failed') {
 				lines.push(`${red(`  ${message.replace(/^[ \t]+/u, '')}`)}`);
 			} else {
-				lines.push(ttyTruncate(dim(`	${message}`)));
+				lines.push(ttyTruncate(dim(`\t${message}`)));
 			}
 		}
 
@@ -266,7 +279,9 @@ const render = isPrettyMode ? () => {
 
 	logUpdate(`${lines.join('\n')}\n`);
 } : () => {
-	for (const [taskName, {allowFailure, duration, message, status, head}] of taskGroups[0]) {
+	for (const [taskName, {
+		allowFailure, duration, message, status, head
+	}] of taskGroups[0]) {
 		if (status !== 'done' && status !== 'failed') {
 			continue;
 		}
@@ -334,9 +349,9 @@ function showError(erroredTask, err) {
 		const environment = err.code === 'ERR_UNSUPPORTED_PLATFORM' ? process.platform : `${err.currentArch} architecture`;
 		erroredTask.message = `No prebuilt PureScript binary is provided for ${environment}.`;
 	} else if (err.INSTALL_URL) {
-		erroredTask.message = `${'\'stack\' command is required for building PureScript from source, ' +
-      'but it\'s not found in your PATH. Make sure you have installed Stack and try again.\n\n' +
-      '→ '}${underline(err.INSTALL_URL)}`;
+		erroredTask.message = `${'\'stack\' command is required for building PureScript from source, '
+      + 'but it\'s not found in your PATH. Make sure you have installed Stack and try again.\n\n'
+      + '→ '}${underline(err.INSTALL_URL)}`;
 	} else {
 		erroredTask.message = err.stack;
 	}
@@ -353,7 +368,7 @@ function showError(erroredTask, err) {
 }
 
 function downloadSummary({ max, bytes }) {
-	return String(Math.round(100 * bytes / max)) + "% of " + filesize(max, filesizeOptions);
+	return `${String(Math.round(100 * bytes / max))}% of ${filesize(max, filesizeOptions)}`;
 }
 
 function ttyTruncate(msg) {
@@ -364,9 +379,9 @@ function ttyTruncate(msg) {
 
 	if (msg.length <= maxWidth) {
 		return msg;
-	} else {
-		return msg.slice(0,80) + "…"
 	}
+
+	return `${msg.slice(0, 80)}…`;
 }
 
 installPurescript({
@@ -418,6 +433,7 @@ installPurescript({
 			}
 
 			render();
+
 			return;
 		}
 
@@ -468,7 +484,6 @@ installPurescript({
 
 		if (event.id === 'check-stack') {
 			task.message = `${event.version} found at ${event.path}`;
-			return;
 		}
 	},
 	error(err) {
@@ -494,9 +509,11 @@ installPurescript({
 			console.log();
 		}
 
-		const [{size: bytes}, {path: cachePath, size: cacheBytes}] = await Promise.all([
-			promisify(stat)(path),
-			cacheWritten ? cacache.get.info(installPurescript.defaultCacheRootDir, installPurescript.cacheKey) : {}
+		const [{ size: bytes }, { path: cachePath, size: cacheBytes }] = await Promise.all([
+			stat(path),
+			cacheWritten
+				? cacache.get.info(defaultCacheRootDir, cacheKey)
+				: {}
 		]);
 
 		console.log(`Installed to ${magenta(path)} ${dim(filesize(bytes, filesizeOptions))}`);

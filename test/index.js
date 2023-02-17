@@ -1,14 +1,11 @@
-'use strict';
+import { execFile } from 'node:child_process';
+import { unlink } from 'node:fs/promises';
+import util from 'node:util';
+import tap from 'tap';
+import rimraf from 'rimraf';
+import installPurescript from '../lib/install-purescript.js';
 
-const fs = require('fs');
-const {execFile} = require('child_process');
-const util = require('util');
-const tap = require('tap');
-const rimraf = require('rimraf');
-
-const installPurescript = require('../install-purescript/index.js');
-
-const cacheRootDir = ".test-cache";
+const cacheRootDir = '.test-cache';
 
 // Set a timeout of 60s (default is 30s)
 tap.setTimeout(1000 * 60);
@@ -38,7 +35,7 @@ function summarizeEvents(observable) {
 			}
 		});
 	});
-};
+}
 
 function assertEvents(t, _found, _expected) {
 	const found = _found.slice();
@@ -46,16 +43,17 @@ function assertEvents(t, _found, _expected) {
 
 	while (found.length > 0 && expected.length > 0) {
 		const next = found.shift();
+		// eslint-disable-next-line eqeqeq
 		if (next.id == expected[0].id) {
 			const nextExpected = expected.shift();
-			t.match(next, nextExpected, "received " + next.id + " event");
+			t.match(next, nextExpected, `received ${next.id} event`);
 		}
 	}
 
 	if (expected.length > 0) {
-		t.fail("expected the following events, but did not receive them: " + expected.map(x => x.id).join(", "));
+		t.fail(`expected the following events, but did not receive them: ${expected.map(x => x.id).join(', ')}`);
 	} else {
-		t.ok(true, "received all expected events")
+		t.ok(true, 'received all expected events');
 	}
 }
 
@@ -64,8 +62,8 @@ function assertEvents(t, _found, _expected) {
 // place).
 async function unlinkIfExists(path) {
 	try {
-		await util.promisify(fs.unlink)('./purs');
-	} catch(err) {
+		await unlink(path);
+	} catch (err) {
 		if (err.code !== 'ENOENT') {
 			throw err;
 		}
@@ -80,7 +78,7 @@ function testInstall(version, expectedEvents) {
 			version
 		}));
 		assertEvents(t, events, expectedEvents);
-		const {stdout} = await util.promisify(execFile)('./purs', ['--version'], {timeout: 1000});
+		const { stdout } = await util.promisify(execFile)('./purs', ['--version'], { timeout: 1000 });
 		t.match(stdout.toString(), version);
 	});
 }

@@ -1,0 +1,35 @@
+extends: airbnb-base
+
+parserOptions:
+  ecmaVersion: 2022
+  type: module
+
+rules:
+  arrow-parens: ["error", "as-needed"]
+  comma-dangle: ["error", "never"]
+  consistent-return: off
+  default-case: off
+  func-names: off
+  guard-for-in: off
+  import/default: error
+  import/extensions: ["error", "always"]
+  import/no-commonjs: error
+  indent: ["error", "tab"]
+  max-classes-per-file: off
+  newline-before-return: error
+  no-await-in-loop: off
+  no-confusing-arrow: off
+  no-console: off
+  no-continue: off
+  no-mixed-operators: off
+  no-multi-spaces: error
+  no-multiple-empty-lines: ["error", { "max": 1, "maxEOF":  0, "maxBOF": 0 }]
+  no-param-reassign: off
+  no-plusplus: off
+  no-restricted-exports: off
+  no-restricted-syntax: off
+  no-shadow: off
+  no-tabs: ["error", { allowIndentationTabs: true }]
+  no-underscore-dangle: off
+  no-use-before-define: off
+  quotes: ["error", "single"]
