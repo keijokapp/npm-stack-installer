@@ -161,6 +161,13 @@ const taskGroups = [
 	]),
 	new TaskGroup([
 		[
+			'head',
+			{
+				head: '',
+				status: 'processing'
+			}
+		],
+		[
 			'check-stack',
 			{
 				head: 'Check if \'stack\' command is available',
