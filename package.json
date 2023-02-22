@@ -17,7 +17,6 @@
     "env-paths": "^2.2.0",
     "execa": "^2.0.3",
     "filesize": "^4.1.2",
-    "is-plain-obj": "^2.0.0",
     "log-symbols": "^3.0.0",
     "log-update": "^4.0.0",
     "make-fetch-happen": "^10.0.0",
