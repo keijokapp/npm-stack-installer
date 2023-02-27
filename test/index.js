@@ -12,31 +12,6 @@ tap.setTimeout(1000 * 60);
 
 rimraf.sync(cacheRootDir);
 
-// Given an installPurescript observable, return a promise which resolves to a
-// summary of the events which occurred during installation (i.e. without
-// repeated events).
-function summarizeEvents(observable) {
-	let lastEventId;
-	const uniqEvents = [];
-
-	return new Promise((resolve, reject) => {
-		observable.subscribe({
-			next(event) {
-				if (event.id !== lastEventId) {
-					uniqEvents.push(event);
-				}
-				lastEventId = event.id;
-			},
-			error(err) {
-				reject(err);
-			},
-			complete() {
-				resolve(uniqEvents);
-			}
-		});
-	});
-}
-
 function assertEvents(t, _found, _expected) {
 	const found = _found.slice();
 	const expected = _expected.slice();
@@ -73,10 +48,18 @@ async function unlinkIfExists(path) {
 function testInstall(version, expectedEvents) {
 	return (async t => {
 		await unlinkIfExists('./purs');
-		const events = await summarizeEvents(installPurescript({
+		let lastEventId;
+		const events = [];
+		await installPurescript({
 			cacheRootDir,
+			progress(event) {
+				if (event.id !== lastEventId) {
+					events.push(event);
+				}
+				lastEventId = event.id;
+			},
 			version
-		}));
+		});
 		assertEvents(t, events, expectedEvents);
 		const { stdout } = await util.promisify(execFile)('./purs', ['--version'], { timeout: 1000 });
 		t.match(stdout.toString(), version);

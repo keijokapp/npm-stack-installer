@@ -386,13 +386,10 @@ function ttyTruncate(msg) {
 
 installPurescript({
 	args: stackArgs,
-	rename: () => argv.name,
-	version: argv['purs-ver'],
 	headers: {
 		'user-agent': 'purescript-installer (https://github.com/purescript/npm-installer)'
-	}
-}).subscribe({
-	next(event) {
+	},
+	progress(event) {
 		initialize(event);
 
 		const task = getCurrentTask(event.id.replace(/:.*$/u, ''));
@@ -486,20 +483,10 @@ installPurescript({
 			task.message = `${event.version} found at ${event.path}`;
 		}
 	},
-	error(err) {
-		clearInterval(loop);
-
-		if (err.id) {
-			const task = getCurrentTask(err.id);
-			showError(task, err);
-			render();
-		} else {
-			console.error(err.stack);
-		}
-
-		process.exitCode = 1;
-	},
-	async complete() {
+	rename: () => argv.name,
+	version: argv['purs-ver']
+}).then(
+	async () => {
 		render();
 		clearInterval(loop);
 
@@ -523,5 +510,18 @@ installPurescript({
 		}
 
 		console.log();
+	},
+	err => {
+		clearInterval(loop);
+
+		if (err.id) {
+			const task = getCurrentTask(err.id);
+			showError(task, err);
+			render();
+		} else {
+			console.error(err.stack);
+		}
+
+		process.exitCode = 1;
 	}
-});
+);
