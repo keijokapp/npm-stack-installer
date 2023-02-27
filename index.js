@@ -335,14 +335,10 @@ function getCurrentTask(currentId) {
 }
 
 function showError(erroredTask, err) {
-	// https://github.com/nodejs/node/blob/v12.0.0/lib/child_process.js#L310
-	// https://github.com/sindresorhus/execa/blob/4692dcd4cec9097ded284ed6f9a71666bd560564/index.js#L167
-	const erroredCommand = err.command || err.cmd;
-
 	erroredTask.status = 'failed';
 
-	if (!erroredTask.subhead && erroredCommand) {
-		erroredTask.subhead = erroredCommand;
+	if (!erroredTask.subhead && err.command) {
+		erroredTask.subhead = err.command;
 	}
 
 	if (err.code === 'ERR_UNSUPPORTED_PLATFORM' || err.code === 'ERR_UNSUPPORTED_ARCH') {
